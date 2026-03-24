@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(ls:*)",
+      "Bash(npx.cmd prisma db push:*)",
+      "Bash(python:*)",
+      "Bash(start:*)",
+      "WebSearch"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "title": "Senior .NET Integration Engineer",
+    "department": "Engineering",
+    "location": "Porto",
+    "seniority": "Senior",
+    "employmentType": "Full-time",
+    "description": "Enterprise integration engineer focused on .NET, Azure, APIs, and banking systems.",
+    "requiredSkills": [".net", "c#", "azure", "microservices"],
+    "optionalSkills": ["kafka", "english", "banking"],
+    "requiredLanguages": ["Portuguese", "English"],
+    "keywords": ["banking", "apis", "azure", "integration"],
+    "minYearsExperience": 5,
+    "externalUrl": "https://careers.itsector.pt/jobs/seed-dotnet-integration",
+    "sourceType": "json",
+    "sourceReference": "public/sample-jobs.json"
+  },
+  {
+    "title": "Frontend Engineer",
+    "department": "Engineering",
+    "location": "Braga",
+    "seniority": "Mid",
+    "employmentType": "Full-time",
+    "description": "Frontend engineer with React, Next.js, and enterprise UI delivery experience.",
+    "requiredSkills": ["react", "typescript", "next.js"],
+    "optionalSkills": ["recharts", "accessibility"],
+    "requiredLanguages": ["Portuguese", "English"],
+    "keywords": ["frontend", "product", "portal"],
+    "minYearsExperience": 3,
+    "externalUrl": "https://careers.itsector.pt/jobs/seed-frontend-engineer",
+    "sourceType": "json",
+    "sourceReference": "public/sample-jobs.json"
+  }
+]

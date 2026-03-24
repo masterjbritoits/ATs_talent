@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  RECRUITER
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+enum CandidateStatus {
+  NEW
+  MANUAL_REVIEW
+  SHORTLISTED
+  REJECTED
+  INTERVIEW_SCHEDULED
+  HIRED
+  TALENT_POOL
+}
+
+enum ApplicationStatus {
+  NEW
+  REVIEW
+  ADVANCED
+  REJECTED
+  INTERVIEW_SCHEDULED
+  TALENT_POOL
+}
+
+enum Recommendation {
+  ADVANCE
+  MANUAL_REVIEW
+  REJECT
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model User {
+  id           String          @id @default(cuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  assigned     Candidate[]     @relation("CandidateRecruiter")
+  notes        RecruiterNote[]
+  auditLogs    AuditLog[]
+}
+
+model Job {
+  id                    String          @id @default(cuid())
+  title                 String
+  department            String
+  location              String
+  seniority             String
+  employmentType        String
+  description           String
+  requiredSkillsJson    Json
+  optionalSkillsJson    Json
+  requiredLanguagesJson Json
+  keywordsJson          Json
+  minYearsExperience    Int
+  status                JobStatus       @default(OPEN)
+  externalUrl           String?
+  sourceType            String
+  sourceReference       String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  applications          Application[]
+}
+
+model Candidate {
+  id                   String             @id @default(cuid())
+  fullName             String
+  primaryEmail         String             @unique
+  phone                String?
+  linkedinUrl          String?
+  githubUrl            String?
+  location             String?
+  country              String?
+  currentTitle         String?
+  summary              String?
+  yearsExperience      Int?
+  parsedSkillsJson     Json
+  parsedLanguagesJson  Json
+  parsedEducationJson  Json
+  parsedExperienceJson Json
+  domainSignalsJson    Json
+  sourceType           String
+  status               CandidateStatus    @default(NEW)
+  overallScore         Float?
+  recommendation       Recommendation?
+  confidenceScore      Float?
+  assignedRecruiterId  String?
+  duplicateGroupKey    String?
+  isInTalentPool       Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  assignedRecruiter    User?              @relation("CandidateRecruiter", fields: [assignedRecruiterId], references: [id])
+  applications         Application[]
+  attachments          Attachment[]
+  emails               EmailMessage[]
+  notes                RecruiterNote[]
+  interviews           InterviewEvent[]
+}
+
+model Application {
+  id                 String            @id @default(cuid())
+  candidateId        String
+  jobId              String?
+  source             String
+  status             ApplicationStatus @default(NEW)
+  appliedAt          DateTime
+  score              Float?
+  recommendation     Recommendation?
+  rankingPosition    Int?
+  scoreBreakdownJson Json
+  rationaleJson      Json
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  candidate          Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job                Job?              @relation(fields: [jobId], references: [id])
+  attachments        Attachment[]
+  emails             EmailMessage[]
+  interviews         InterviewEvent[]
+}
+
+model EmailMessage {
+  id                String         @id @default(cuid())
+  candidateId       String?
+  applicationId     String?
+  graphMessageId    String         @unique
+  internetMessageId String?
+  conversationId    String?
+  direction         EmailDirection
+  fromAddress       String
+  toAddressesJson   Json
+  ccAddressesJson   Json
+  subject           String
+  bodyText          String?
+  bodyHtml          String?
+  receivedAt        DateTime?
+  sentAt            DateTime?
+  processedAt       DateTime?
+  rawHeadersJson    Json
+  createdAt         DateTime       @default(now())
+  candidate         Candidate?     @relation(fields: [candidateId], references: [id])
+  application       Application?   @relation(fields: [applicationId], references: [id])
+  attachments       Attachment[]
+}
+
+model Attachment {
+  id                 String       @id @default(cuid())
+  candidateId        String?
+  applicationId      String?
+  emailMessageId     String?
+  originalFilename   String
+  normalizedFilename String
+  mimeType           String
+  filePath           String
+  parsedText         String?
+  parserType         String?
+  parserConfidence   Float?
+  attachmentType     String
+  createdAt          DateTime     @default(now())
+  candidate          Candidate?   @relation(fields: [candidateId], references: [id])
+  application        Application? @relation(fields: [applicationId], references: [id])
+  emailMessage       EmailMessage? @relation(fields: [emailMessageId], references: [id])
+}
+
+model RecruiterNote {
+  id         String    @id @default(cuid())
+  candidateId String
+  authorId   String
+  note       String
+  createdAt  DateTime  @default(now())
+  candidate  Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  author     User      @relation(fields: [authorId], references: [id])
+}
+
+model InterviewEvent {
+  id                String       @id @default(cuid())
+  candidateId       String
+  applicationId     String?
+  graphEventId      String?
+  title             String
+  startsAt          DateTime
+  endsAt            DateTime
+  location          String?
+  attendeeEmailsJson Json
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  candidate         Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  application       Application? @relation(fields: [applicationId], references: [id])
+}
+
+model EmailTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @unique
+  subjectTemplate String
+  bodyTemplate    String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ScoringConfig {
+  id         String   @id @default(cuid())
+  configJson Json
+  updatedAt  DateTime @updatedAt
+}
+
+model ImportRun {
+  id          String    @id @default(cuid())
+  type        String
+  source      String
+  status      String
+  summaryJson Json
+  startedAt   DateTime
+  finishedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorUserId String?
+  entityType String
+  entityId   String
+  action     String
+  metadataJson Json
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorUserId], references: [id])
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  valueJson Json
+  updatedAt DateTime @updatedAt
+}
