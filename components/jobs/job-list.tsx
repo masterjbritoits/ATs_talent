@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -26,6 +27,15 @@ export function JobList({ jobs }: { jobs: any[] }) {
             ))}
           </div>
           <div className="mt-5 text-sm text-muted">{job.applications.length} applications tracked</div>
+          <div className="mt-4 flex items-center justify-between">
+            <Link
+              href={`/job-publishing?jobId=${job.id}`}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
+            >
+              Publicar esta vaga
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
         </Card>
       ))}
     </div>

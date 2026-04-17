@@ -28,10 +28,48 @@ async function graphFetch(path: string, init?: RequestInit) {
   return response.json();
 }
 
-export async function listMailboxMessages() {
+const MAILBOX_USER = () =>
+  encodeURIComponent(env("MICROSOFT_USER_EMAIL", "careers@itsector.pt"));
+
+/**
+ * Lists inbox messages.
+ * Uses $deltaToken / $skipToken for incremental sync when `deltaLink` is
+ * provided, otherwise fetches the most recent 50 messages.
+ */
+export async function listMailboxMessages(options?: {
+  deltaLink?: string;
+  top?: number;
+}): Promise<{ value: any[]; "@odata.deltaLink"?: string; "@odata.nextLink"?: string }> {
+  if (options?.deltaLink) {
+    return graphFetch(options.deltaLink.replace(GRAPH_BASE, ""));
+  }
+
+  const top = options?.top ?? 50;
   return graphFetch(
-    `/users/${encodeURIComponent(env("MICROSOFT_USER_EMAIL", "careers@itsector.pt"))}/mailFolders/inbox/messages?$top=25&$orderby=receivedDateTime desc`
+    `/users/${MAILBOX_USER()}/mailFolders/inbox/messages?$top=${top}&$orderby=receivedDateTime desc&$expand=attachments($select=id,name,contentType,size,isInline)&$select=id,internetMessageId,conversationId,subject,from,toRecipients,ccRecipients,body,bodyPreview,receivedDateTime,hasAttachments,internetMessageHeaders`
   );
+}
+
+/**
+ * Fetches full attachment content (base64) for a specific message attachment.
+ * Only fetches when the attachment is not inline and has a supported MIME type.
+ */
+export async function getAttachmentContent(
+  messageId: string,
+  attachmentId: string
+): Promise<{ contentBytes: string; contentType: string; name: string } | null> {
+  try {
+    const data = await graphFetch(
+      `/users/${MAILBOX_USER()}/messages/${messageId}/attachments/${attachmentId}`
+    );
+    return {
+      contentBytes: data?.contentBytes ?? "",
+      contentType: data?.contentType ?? "application/octet-stream",
+      name: data?.name ?? "attachment"
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function sendGraphEmail(payload: {
@@ -40,7 +78,7 @@ export async function sendGraphEmail(payload: {
   body: string;
 }) {
   return graphFetch(
-    `/users/${encodeURIComponent(env("MICROSOFT_USER_EMAIL", "careers@itsector.pt"))}/sendMail`,
+    `/users/${MAILBOX_USER()}/sendMail`,
     {
       method: "POST",
       body: JSON.stringify({
@@ -65,7 +103,7 @@ export async function createGraphCalendarEvent(payload: {
   body?: string;
 }) {
   return graphFetch(
-    `/users/${encodeURIComponent(env("MICROSOFT_USER_EMAIL", "careers@itsector.pt"))}/events`,
+    `/users/${MAILBOX_USER()}/events`,
     {
       method: "POST",
       body: JSON.stringify({
@@ -82,3 +120,4 @@ export async function createGraphCalendarEvent(payload: {
     }
   );
 }
+

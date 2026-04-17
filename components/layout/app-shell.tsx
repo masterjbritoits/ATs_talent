@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import {
   BarChart3,
   BriefcaseBusiness,
+  ExternalLink,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/jobs", label: "Jobs", icon: BriefcaseBusiness },
+  { href: "/job-publishing", label: "Publishing", icon: ExternalLink },
   { href: "/talent-pool", label: "Talent Pool", icon: UserSquare2 },
   { href: "/templates", label: "Templates", icon: Mail },
   { href: "/reports", label: "Reports", icon: BarChart3 },

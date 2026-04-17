@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -28,6 +30,15 @@ export default async function JobDetailPage({
           <Badge tone={job.status === "OPEN" ? "success" : "warning"}>{job.status}</Badge>
         </div>
         <p className="mt-6 text-sm text-muted">{job.description}</p>
+        <div className="mt-6">
+          <Link
+            href={`/job-publishing?jobId=${job.id}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#132f55]"
+          >
+            Publicar esta vaga
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
       </Card>
 
       <Card>

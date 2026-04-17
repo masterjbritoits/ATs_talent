@@ -49,7 +49,12 @@ function signValue(userId: string) {
 }
 
 function getSignature(userId: string) {
-  return Buffer.from(`${userId}:${env("SESSION_SECRET", "dev-secret")}`).toString(
-    "base64url"
-  );
+  const secret = env("SESSION_SECRET");
+  if (!secret) {
+    throw new Error(
+      "SESSION_SECRET is not configured. " +
+        "Set it in Azure App Service application settings or as a Key Vault reference."
+    );
+  }
+  return Buffer.from(`${userId}:${secret}`).toString("base64url");
 }

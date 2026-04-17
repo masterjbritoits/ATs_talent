@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // When DIRECT_URL is set (migration runs) Prisma uses it directly; the
+  // connection-pooled DATABASE_URL is used at runtime.
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 enum UserRole {
