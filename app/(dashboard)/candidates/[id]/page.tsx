@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { CandidateEditForm } from "@/components/candidates/candidate-edit-form";
 import { EmailDraftPanel } from "@/components/email/email-draft-panel";
 import { InterviewPanel } from "@/components/candidates/interview-panel";
+import { NotesPanel } from "@/components/candidates/notes-panel";
+import { TimelinePanel } from "@/components/candidates/timeline-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getCandidateDetail } from "@/lib/data";
@@ -20,7 +22,7 @@ export default async function CandidateDetailPage({
     notFound();
   }
 
-  const { candidate, alternativeRoles } = data;
+  const { candidate, auditLogs, alternativeRoles } = data;
   const application = candidate.applications[0];
 
   return (
@@ -115,7 +117,7 @@ export default async function CandidateDetailPage({
           <h3 className="text-lg font-semibold">Alternative Role Suggestions</h3>
           <div className="mt-4 space-y-3">
             {alternativeRoles.map((job) => (
-              <div key={job.jobId} className="rounded-xl border border-slate-100 p-4">
+              <div key={job.jobId} className="rounded-xl border border-white/10 p-4">
                 <p className="font-semibold">{job.title}</p>
                 <p className="text-sm text-muted">Fit score {job.score}</p>
                 <p className="mt-2 text-sm text-muted">{job.rationale}</p>
@@ -123,18 +125,14 @@ export default async function CandidateDetailPage({
             ))}
           </div>
         </Card>
+        <NotesPanel candidateId={candidate.id} initialNotes={candidate.notes} />
         <Card>
-          <h3 className="text-lg font-semibold">Timeline</h3>
-          <div className="mt-4 space-y-3">
-            {candidate.emails.map((email) => (
-              <div key={email.id} className="rounded-xl border border-slate-100 p-4">
-                <p className="font-semibold">{email.subject}</p>
-                <p className="text-sm text-muted">
-                  {email.direction} · {formatDate(email.createdAt, "dd MMM yyyy HH:mm")}
-                </p>
-              </div>
-            ))}
-          </div>
+          <h3 className="mb-4 text-lg font-semibold">Timeline</h3>
+          <TimelinePanel
+            emails={candidate.emails}
+            interviews={candidate.interviews}
+            auditLogs={auditLogs}
+          />
         </Card>
       </div>
     </div>

@@ -103,19 +103,25 @@ export async function getCandidatesData(searchParams?: Record<string, string | s
 }
 
 export async function getCandidateDetail(id: string) {
-  const [candidate, jobs, templates] = await Promise.all([
+  const [candidate, jobs, templates, auditLogs] = await Promise.all([
     prisma.candidate.findUnique({
       where: { id },
       include: {
         applications: { include: { job: true } },
         attachments: true,
-        emails: true,
-        notes: { include: { author: true } },
-        interviews: true
+        emails: { orderBy: { createdAt: "desc" } },
+        notes: { include: { author: true }, orderBy: { createdAt: "desc" } },
+        interviews: { orderBy: { startsAt: "asc" } }
       }
     }),
     prisma.job.findMany({ where: { status: "OPEN" } }),
-    prisma.emailTemplate.findMany({ where: { isActive: true } })
+    prisma.emailTemplate.findMany({ where: { isActive: true } }),
+    prisma.auditLog.findMany({
+      where: { entityId: id, entityType: "Candidate" },
+      include: { actor: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    })
   ]);
 
   if (!candidate) {
@@ -124,6 +130,7 @@ export async function getCandidateDetail(id: string) {
 
   return {
     candidate,
+    auditLogs,
     alternativeRoles: suggestAlternativeJobs(candidate, jobs),
     templates
   };

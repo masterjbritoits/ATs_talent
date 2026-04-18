@@ -196,13 +196,19 @@ model Attachment {
 }
 
 model RecruiterNote {
-  id         String    @id @default(cuid())
+  id          String    @id @default(cuid())
   candidateId String
-  authorId   String
-  note       String
-  createdAt  DateTime  @default(now())
-  candidate  Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  author     User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  note        String
+  noteType    String    @default("GENERAL")
+  tagsJson    Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  author      User      @relation(fields: [authorId], references: [id])
+
+  @@index([candidateId])
+  @@index([noteType])
 }
 
 model InterviewEvent {

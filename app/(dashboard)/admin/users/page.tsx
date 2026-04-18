@@ -1,27 +1,39 @@
+import { Users } from "lucide-react";
+
+import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/db/prisma";
 import { Card } from "@/components/ui/card";
+import { AdminUsersClient } from "@/components/admin/users-client";
 
 export default async function AdminUsersPage() {
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+  await requireAdmin();
+
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true }
+  });
+
+  const totalActive = users.filter((u) => u.isActive).length;
+  const totalAdmins = users.filter((u) => u.role === "ADMIN").length;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Recruiter & Admin Users</h1>
-        <p className="mt-2 text-sm text-muted">
-          Local account administration with role and activation visibility for controlled workstation usage.
-        </p>
-      </div>
-      <div className="grid gap-4 xl:grid-cols-2">
-        {users.map((user) => (
-          <Card key={user.id}>
-            <h3 className="text-lg font-semibold">{user.name}</h3>
-            <p className="mt-2 text-sm text-muted">
-              {user.email} · {user.role} · {user.isActive ? "Active" : "Inactive"}
+      {/* Header */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="rounded-2xl bg-sky-500/10 p-3">
+            <Users className="h-5 w-5 text-sky-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">User Management</h1>
+            <p className="mt-1 text-sm text-muted">
+              {users.length} users · {totalActive} active · {totalAdmins} admins
             </p>
-          </Card>
-        ))}
-      </div>
+          </div>
+        </div>
+      </Card>
+
+      <AdminUsersClient initialUsers={users} />
     </div>
   );
 }
