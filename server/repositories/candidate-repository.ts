@@ -1,8 +1,8 @@
-import { Prisma, CandidateStatus, ApplicationStatus } from \"@prisma/client\";
-import { prisma } from \"@/lib/db/prisma\";
+﻿import { Prisma, CandidateStatus, ApplicationStatus } from "@prisma/client";
+import { prisma } from "@/lib/db/prisma";
 
 export interface CandidateFilterOptions {
-  status?: CandidateStatus;
+  status?: string;
   jobId?: string;
   minScore?: number;
   beforeDate?: Date;
@@ -21,7 +21,7 @@ export class CandidateRepository {
         notes: { include: { author: true } },
         interviews: true
       },
-      orderBy: { updatedAt: \"desc\" }
+      orderBy: { updatedAt: "desc" }
     });
   }
 
@@ -69,7 +69,7 @@ export class CandidateRepository {
         notes: { include: { author: true } },
         interviews: true
       },
-      orderBy: { updatedAt: \"desc\" }
+      orderBy: { updatedAt: "desc" }
     });
   }
 
@@ -103,3 +103,4 @@ export class CandidateRepository {
     });
   }
 }
+
