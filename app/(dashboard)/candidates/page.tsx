@@ -4,7 +4,6 @@ import { CandidateFilterSidebar } from "@/components/candidates/candidate-filter
 import { CandidateTable } from "@/components/candidates/candidate-table";
 import { Card } from "@/components/ui/card";
 import { getCandidatesData, getJobsData } from "@/lib/data";
-import { detectDuplicates } from "@/lib/matching/duplicates";
 
 export default async function CandidatesPage({
   searchParams
@@ -25,7 +24,6 @@ export default async function CandidatesPage({
         <Suspense fallback={<div>Loading filters...</div>}>
           <CandidateFilterSidebar
             jobs={jobsData.map((job) => ({ id: job.id, title: job.title }))}
-            onFiltersChange={() => {}}
           />
         </Suspense>
       </div>

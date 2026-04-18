@@ -16,7 +16,7 @@ export interface CandidateFilters {
 
 interface Props {
   jobs: Array<{ id: string; title: string }>;
-  onFiltersChange: (filters: CandidateFilters) => void;
+  onFiltersChange?: (filters: CandidateFilters) => void;
 }
 
 export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
@@ -35,7 +35,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
   const handleFilterChange = (key: keyof CandidateFilters, value: any) => {
     const updated = { ...filters, [key]: value || undefined };
     setFilters(updated);
-    onFiltersChange(updated);
+    onFiltersChange?.(updated);
 
     // Update URL
     const params = new URLSearchParams();
@@ -47,7 +47,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
 
   const handleReset = () => {
     setFilters({});
-    onFiltersChange({});
+    onFiltersChange?.({});
     router.push("?");
   };
 
