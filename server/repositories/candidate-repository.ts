@@ -1,4 +1,4 @@
-﻿import { Prisma, CandidateStatus, ApplicationStatus } from "@prisma/client";
+import { Prisma, CandidateStatus, ApplicationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 export interface CandidateFilterOptions {
@@ -29,7 +29,7 @@ export class CandidateRepository {
     const where: Prisma.CandidateWhereInput = {};
 
     if (options.status) {
-      where.status = options.status;
+      where.status = options.status as any;
     }
 
     if (options.search) {
@@ -92,15 +92,14 @@ export class CandidateRepository {
         candidateId,
         ...(jobId && { jobId })
       },
-      data: { status: status as ApplicationStatus }
+      data: { status: status as any }
     });
   }
 
   async bulkUpdateStatus(candidateIds: string[], status: string) {
     return prisma.candidate.updateMany({
       where: { id: { in: candidateIds } },
-      data: { status: status as CandidateStatus }
+      data: { status: status as any }
     });
   }
 }
-
