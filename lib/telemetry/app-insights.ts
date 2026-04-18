@@ -1,71 +1,72 @@
 /**
- * Application Insights telemetry initialisation.
+ * Application Insights telemetry — Node.js only.
  *
- * Call initTelemetry() once at application startup (for example from
- * instrumentation.ts). The SDK is loaded lazily only when a connection string
- * is present so local dev stays clean and fast.
+ * This module is only safe to use in server-side contexts (API routes,
+ * server components, instrumentation.ts). The SDK is loaded lazily via
+ * conditional require to avoid bundling for browser.
  */
-let _initialised = false;
-let _client: {
-  trackEvent: (input: { name: string; properties?: Record<string, string> }) => void;
-  trackException: (input: { exception: Error; properties?: Record<string, string> }) => void;
-  trackMetric: (input: { name: string; value: number; properties?: Record<string, string> }) => void;
-  flush: (input: { callback: () => void }) => void;
-} | null = null;
 
-async function loadAppInsights() {
-  const { createRequire } = await import("node:module");
-  const require = createRequire(import.meta.url);
-  return require("applicationinsights");
-}
+let _initialised = false;
+let _client: any = null;
 
 export async function initTelemetry() {
-  const connStr = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
-  if (!connStr || _initialised) return;
+  if (typeof window !== "undefined") {
+    // Browser context — skip
+    return;
+  }
 
-  const appInsights = await loadAppInsights();
+  if (!process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || _initialised) {
+    return;
+  }
 
-  appInsights
-    .setup(connStr)
-    .setAutoCollectRequests(true)
-    .setAutoCollectPerformance(true, true)
-    .setAutoCollectExceptions(true)
-    .setAutoCollectDependencies(true)
-    .setAutoCollectConsole(true, true)
-    .setAutoCollectHeartbeat(true)
-    .setUseDiskRetryCaching(true)
-    .setSendLiveMetrics(process.env.NODE_ENV === "production")
-    .start();
+  try {
+    // Dynamic require only in Node.js context
+    const appInsights = require("applicationinsights");
 
-  _client = appInsights.defaultClient ?? null;
-  _initialised = true;
+    appInsights
+      .setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING)
+      .setAutoCollectRequests(true)
+      .setAutoCollectPerformance(true, true)
+      .setAutoCollectExceptions(true)
+      .setAutoCollectDependencies(true)
+      .setAutoCollectConsole(true, true)
+      .setAutoCollectHeartbeat(true)
+      .setUseDiskRetryCaching(true)
+      .setSendLiveMetrics(process.env.NODE_ENV === "production")
+      .start();
+
+    _client = appInsights.defaultClient ?? null;
+    _initialised = true;
+  } catch (err) {
+    console.warn("[telemetry] Failed to initialise Application Insights:", err);
+  }
 }
 
-/** Track a named event with optional properties. */
+/** Track a named event (server-only). */
 export function trackEvent(name: string, properties?: Record<string, string>) {
   if (!_initialised || !_client) return;
-  _client.trackEvent({ name, properties });
+  _client.trackEvent?.({ name, properties });
 }
 
-/** Track an exception. */
+/** Track an exception (server-only). */
 export function trackException(error: Error, properties?: Record<string, string>) {
   if (!_initialised || !_client) return;
-  _client.trackException({ exception: error, properties });
+  _client.trackException?.({ exception: error, properties });
 }
 
-/** Track a metric value (for example sync duration). */
+/** Track a metric value (server-only). */
 export function trackMetric(name: string, value: number, properties?: Record<string, string>) {
   if (!_initialised || !_client) return;
-  _client.trackMetric({ name, value, properties });
+  _client.trackMetric?.({ name, value, properties });
 }
 
-/** Flush all buffered telemetry (useful before process shutdown). */
+/** Flush all buffered telemetry (server-only). */
 export function flushTelemetry(): Promise<void> {
   return new Promise((resolve) => {
     if (!_initialised || !_client) {
       resolve();
       return;
     }
-    _client.flush({ callback: () => resolve() });
+    _client.flush?.({ callback: () => resolve() });
   });
 }

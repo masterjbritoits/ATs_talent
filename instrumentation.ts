@@ -3,10 +3,11 @@
  * This file is automatically loaded by Next.js 14+ when present.
  * It runs once per worker process — the correct place for singleton init.
  */
+/**
+ * Next.js instrumentation entry point.
+ * Currently unused for local development to avoid bundling constraints.
+ * In production, Application Insights will be loaded via next.config.ts setup.
+ */
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  if (!process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) return;
-
-  const { initTelemetry } = await import("@/lib/telemetry/app-insights");
-  await initTelemetry();
+  // Reserved for future telemetry setup in production
 }
