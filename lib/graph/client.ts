@@ -1,11 +1,14 @@
 import { env } from "@/lib/utils/env";
+import { generateMockGraphMessages } from "@/lib/mocks";
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+
+const isMocked = () => !env("MICROSOFT_CLIENT_SECRET", "");
 
 async function graphFetch(path: string, init?: RequestInit) {
   const token = env("MICROSOFT_CLIENT_SECRET");
   if (!token) {
-    throw new Error("Microsoft Graph is not configured.");
+    throw new Error("Microsoft Graph is not configured. Use mock mode by leaving credentials unset.");
   }
 
   const response = await fetch(`${GRAPH_BASE}${path}`, {
@@ -32,14 +35,18 @@ const MAILBOX_USER = () =>
   encodeURIComponent(env("MICROSOFT_USER_EMAIL", "careers@itsector.pt"));
 
 /**
- * Lists inbox messages.
- * Uses $deltaToken / $skipToken for incremental sync when `deltaLink` is
- * provided, otherwise fetches the most recent 50 messages.
+ * Lists inbox messages. Uses mock data when Graph is not configured.
+ * Supports incremental sync via $deltaToken when provided.
  */
 export async function listMailboxMessages(options?: {
   deltaLink?: string;
   top?: number;
 }): Promise<{ value: any[]; "@odata.deltaLink"?: string; "@odata.nextLink"?: string }> {
+  if (isMocked()) {
+    console.log("[graph] Using mock mailbox messages (Graph not configured)");
+    return generateMockGraphMessages();
+  }
+
   if (options?.deltaLink) {
     return graphFetch(options.deltaLink.replace(GRAPH_BASE, ""));
   }
@@ -52,12 +59,22 @@ export async function listMailboxMessages(options?: {
 
 /**
  * Fetches full attachment content (base64) for a specific message attachment.
- * Only fetches when the attachment is not inline and has a supported MIME type.
+ * Returns mock data when Graph is not configured.
  */
 export async function getAttachmentContent(
   messageId: string,
   attachmentId: string
 ): Promise<{ contentBytes: string; contentType: string; name: string } | null> {
+  if (isMocked()) {
+    console.log(`[graph] Using mock attachment (Graph not configured)`);
+    // Return a minimal PDF mock
+    return {
+      contentBytes: Buffer.from("Mock PDF content").toString("base64"),
+      contentType: "application/pdf",
+      name: "mock_cv.pdf"
+    };
+  }
+
   try {
     const data = await graphFetch(
       `/users/${MAILBOX_USER()}/messages/${messageId}/attachments/${attachmentId}`
@@ -77,6 +94,11 @@ export async function sendGraphEmail(payload: {
   subject: string;
   body: string;
 }) {
+  if (isMocked()) {
+    console.log("[graph] Mock email send (Graph not configured):", { to: payload.to, subject: payload.subject });
+    return { success: true, mockEmail: true };
+  }
+
   return graphFetch(
     `/users/${MAILBOX_USER()}/sendMail`,
     {
@@ -102,6 +124,11 @@ export async function createGraphCalendarEvent(payload: {
   location?: string;
   body?: string;
 }) {
+  if (isMocked()) {
+    console.log("[graph] Mock calendar event created (Graph not configured):", { subject: payload.subject, attendees: payload.attendees });
+    return { id: "mock-event-" + Date.now(), success: true };
+  }
+
   return graphFetch(
     `/users/${MAILBOX_USER()}/events`,
     {
@@ -120,4 +147,6 @@ export async function createGraphCalendarEvent(payload: {
     }
   );
 }
+
+export const isGraphConfigured = () => !isMocked();
 

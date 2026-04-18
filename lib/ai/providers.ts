@@ -1,34 +1,15 @@
-/**
- * AI provider abstraction.
- *
- * Production target: Microsoft Foundry (Azure AI Foundry) using the
- * azure-ai-projects SDK.  Foundry exposes an OpenAI-compatible chat
- * completions endpoint so the implementation uses the standard fetch-based
- * approach until the JS SDK reaches stable.
- *
- * Provider resolution order:
- *   1. AI_PROVIDER=foundry  → FoundryProvider  (preferred, production)
- *   2. AI_PROVIDER=openai   → OpenAI-compatible provider
- *   3. AI_PROVIDER=disabled or unset → DisabledAiProvider (safe no-op)
- *
- * All providers must be toggled via AI_ENABLED=true AND AI_PROVIDER=<name>.
- * Each feature is additionally gated by a per-feature flag so teams can
- * roll out capabilities incrementally.
- */
+import {
+  generateMockAiSummary,
+  generateMockEmailDraft,
+  generateMockMatchExplanation,
+  generateMockInterviewQuestions
+} from "@/lib/mocks";
 import { EmailDraftContext, EmailDraftResult } from "@/lib/types";
 
-// ─────────────────────────────────────────────────────────────
-// Provider interface
-// ─────────────────────────────────────────────────────────────
-
 export interface AiProvider {
-  /** Summarise a candidate CV into 3-5 recruiter-readable bullet points. */
   summarizeCandidate?(input: { profileText: string }): Promise<string>;
-  /** Generate an email draft (subject + body) for a given communication type. */
   generateEmailDraft?(input: EmailDraftContext & { templateType: string }): Promise<EmailDraftResult>;
-  /** Explain why a candidate matches or does not match a job description. */
   explainProfile?(input: { profileText: string; jobText: string }): Promise<string>;
-  /** Suggest structured interview questions tailored to a candidate/role pair. */
   suggestInterviewQuestions?(input: {
     candidateSummary: string;
     jobTitle: string;
@@ -36,35 +17,39 @@ export interface AiProvider {
   }): Promise<string[]>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Disabled provider (default — safe fallback)
-// ─────────────────────────────────────────────────────────────
-
-class DisabledAiProvider implements AiProvider {
-  private _warn() {
-    console.warn(
-      "[ai] AI provider is disabled. Set AI_ENABLED=true and AI_PROVIDER=foundry " +
-        "(or openai) to enable AI features."
-    );
+class MockAiProvider implements AiProvider {
+  async summarizeCandidate(input: { profileText: string }): Promise<string> {
+    console.log("[ai] Using mock summary (Foundry not configured)");
+    return generateMockAiSummary(input.profileText);
   }
 
-  async generateEmailDraft(): Promise<EmailDraftResult> {
-    this._warn();
-    throw new Error("AI provider is disabled.");
+  async generateEmailDraft(input: EmailDraftContext & { templateType: string }): Promise<EmailDraftResult> {
+    console.log("[ai] Using mock email draft (Foundry not configured)");
+    const draft = generateMockEmailDraft(input.templateType, input);
+    return { subject: draft.subject, body: draft.body, provider: "mock" };
+  }
+
+  async explainProfile(input: { profileText: string; jobText: string }): Promise<string> {
+    console.log("[ai] Using mock profile explanation (Foundry not configured)");
+    return generateMockMatchExplanation(input.profileText, input.jobText);
+  }
+
+  async suggestInterviewQuestions(input: {
+    candidateSummary: string;
+    jobTitle: string;
+    requiredSkills: string[];
+  }): Promise<string[]> {
+    console.log("[ai] Using mock interview questions (Foundry not configured)");
+    return generateMockInterviewQuestions(input.candidateSummary, input.jobTitle);
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Microsoft Foundry provider
-// ─────────────────────────────────────────────────────────────
+class DisabledAiProvider implements AiProvider {
+  async generateEmailDraft(): Promise<EmailDraftResult> {
+    throw new Error("AI provider is disabled. Set AI_ENABLED=true to enable AI features.");
+  }
+}
 
-/**
- * Uses the Azure AI Foundry project endpoint.
- * Required env vars:
- *   AZURE_AI_FOUNDRY_ENDPOINT   — project endpoint, e.g. https://<hub>.openai.azure.com/
- *   AZURE_AI_FOUNDRY_DEPLOYMENT — model deployment name, e.g. gpt-4o
- *   AZURE_AI_FOUNDRY_API_KEY    — API key (or use Managed Identity; key is fallback)
- */
 class FoundryProvider implements AiProvider {
   private endpoint: string;
   private deployment: string;
@@ -100,47 +85,30 @@ class FoundryProvider implements AiProvider {
     return this.chat([
       {
         role: "system",
-        content:
-          "You are a senior technical recruiter at an enterprise software consultancy. " +
-          "Summarise the candidate profile in 4 concise bullet points focusing on role fit, " +
-          "key skills, seniority, and any notable signals. Be objective and evidence-based. " +
-          "Output only the bullet points, no preamble."
+        content: "You are a senior recruiter. Summarize in 4 bullets focused on fit, skills, seniority, and signals."
       },
       { role: "user", content: input.profileText }
     ]);
   }
 
-  async generateEmailDraft(
-    input: EmailDraftContext & { templateType: string }
-  ): Promise<EmailDraftResult> {
-    const prompt =
-      `Template type: ${input.templateType}\n` +
-      `Candidate name: ${input.candidateName ?? "Candidate"}\n` +
-      `Job title: ${input.jobTitle ?? "the position"}\n` +
-      `Recruiter name: ${input.recruiterName ?? "the recruiting team"}\n` +
-      `Company: ITSector\n` +
-      `Additional context: ${input.extraContext ?? "none"}\n\n` +
-      `Write a professional recruitment email with subject and body. ` +
-      `Return JSON: { "subject": "...", "body": "..." }`;
-
+  async generateEmailDraft(input: EmailDraftContext & { templateType: string }): Promise<EmailDraftResult> {
     const raw = await this.chat([
       {
         role: "system",
-        content:
-          "You are a professional recruiter. Write clear, warm, and concise recruitment emails " +
-          "in the language of the candidate (default: Portuguese). Return only valid JSON."
+        content: "You are a professional recruiter. Write clear, warm recruitment emails. Return only valid JSON."
       },
-      { role: "user", content: prompt }
+      {
+        role: "user",
+        content: `Generate a ${input.templateType} email for ${input.candidateName} about ${input.jobTitle}. Return: { "subject": "...", "body": "..." }`
+      }
     ]);
 
     try {
-      // Strip markdown code fences if present
       const cleaned = raw.replace(/^```json?\s*/i, "").replace(/```$/i, "").trim();
       const parsed = JSON.parse(cleaned);
       return { subject: parsed.subject, body: parsed.body, provider: "foundry" };
     } catch {
-      // Fallback: treat entire response as body
-      return { subject: `Re: ${input.jobTitle ?? "Your application"}`, body: raw, provider: "foundry" };
+      return { subject: `Re: ${input.jobTitle}`, body: raw, provider: "foundry" };
     }
   }
 
@@ -148,15 +116,9 @@ class FoundryProvider implements AiProvider {
     return this.chat([
       {
         role: "system",
-        content:
-          "You are a senior technical recruiter. Analyse the match between the candidate and " +
-          "the job description. Return a concise explanation: what fits well, what gaps exist, " +
-          "and one recommendation. Be factual; do not invent skills or experience."
+        content: "Analyze candidate-job fit. Return concise: what fits, gaps, and one recommendation."
       },
-      {
-        role: "user",
-        content: `CANDIDATE:\n${input.profileText}\n\nJOB:\n${input.jobText}`
-      }
+      { role: "user", content: `Candidate:\n${input.profileText}\n\nJob:\n${input.jobText}` }
     ]);
   }
 
@@ -165,69 +127,51 @@ class FoundryProvider implements AiProvider {
     jobTitle: string;
     requiredSkills: string[];
   }): Promise<string[]> {
-    const prompt =
-      `Job: ${input.jobTitle}\n` +
-      `Required skills: ${input.requiredSkills.join(", ")}\n` +
-      `Candidate summary: ${input.candidateSummary}\n\n` +
-      `Generate 6 structured interview questions (2 technical, 2 behavioural, 2 situational). ` +
-      `Return a JSON array of strings.`;
-
     const raw = await this.chat([
       {
         role: "system",
-        content:
-          "You are an experienced technical interviewer. Generate precise, objective interview " +
-          "questions tailored to the role and candidate background. Return only a JSON array."
+        content: "Generate 6 interview questions (2 technical, 2 behavioral, 2 situational). Return JSON array."
       },
-      { role: "user", content: prompt }
+      {
+        role: "user",
+        content: `Role: ${input.jobTitle}, Skills: ${input.requiredSkills.join(", ")}`
+      }
     ]);
 
     try {
       const cleaned = raw.replace(/^```json?\s*/i, "").replace(/```$/i, "").trim();
       return JSON.parse(cleaned);
     } catch {
-      return raw.split("\n").filter((line) => line.trim().startsWith("-") || /^\d+\./.test(line.trim()))
-        .map((line) => line.replace(/^[-\d.]+\s*/, "").trim());
+      return raw.split("\n").filter(l => /^\d+\./.test(l.trim())).map(l => l.replace(/^\d+\.\s*/, ""));
     }
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Provider factory
-// ─────────────────────────────────────────────────────────────
-
 export function getAiProvider(): AiProvider {
+  if (process.env.NODE_ENV !== "production" && process.env.AI_ENABLED !== "true") {
+    console.log("[ai] Auto-enabling mock provider for local development");
+    return new MockAiProvider();
+  }
+
   if (process.env.AI_ENABLED !== "true") {
     return new DisabledAiProvider();
   }
 
-  switch (process.env.AI_PROVIDER) {
-    case "foundry": {
-      const endpoint = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
-      const deployment = process.env.AZURE_AI_FOUNDRY_DEPLOYMENT;
-      const apiKey = process.env.AZURE_AI_FOUNDRY_API_KEY;
-      if (!endpoint || !deployment || !apiKey) {
-        console.error(
-          "[ai] AI_PROVIDER=foundry but AZURE_AI_FOUNDRY_ENDPOINT, " +
-            "AZURE_AI_FOUNDRY_DEPLOYMENT or AZURE_AI_FOUNDRY_API_KEY is missing. " +
-            "Falling back to disabled provider."
-        );
-        return new DisabledAiProvider();
-      }
-      return new FoundryProvider(endpoint, deployment, apiKey);
+  if (process.env.AI_PROVIDER === "foundry") {
+    const endpoint = process.env.AZURE_AI_FOUNDRY_ENDPOINT;
+    const deployment = process.env.AZURE_AI_FOUNDRY_DEPLOYMENT;
+    const apiKey = process.env.AZURE_AI_FOUNDRY_API_KEY;
+    if (!endpoint || !deployment || !apiKey) {
+      console.warn("[ai] Foundry credentials missing, using mock");
+      return new MockAiProvider();
     }
-
-    case "openai":
-    case "azure-openai":
-    case "anthropic":
-    case "local":
-    default:
-      console.warn(`[ai] AI_PROVIDER="${process.env.AI_PROVIDER}" is not yet implemented. Using disabled provider.`);
-      return new DisabledAiProvider();
+    return new FoundryProvider(endpoint, deployment, apiKey);
   }
+
+  console.log("[ai] Using mock provider");
+  return new MockAiProvider();
 }
 
-/** Returns true when AI features are fully configured and enabled. */
 export function isAiEnabled(): boolean {
   return (
     process.env.AI_ENABLED === "true" &&
@@ -236,3 +180,6 @@ export function isAiEnabled(): boolean {
   );
 }
 
+export function isAiMocked(): boolean {
+  return !process.env.AZURE_AI_FOUNDRY_ENDPOINT;
+}
