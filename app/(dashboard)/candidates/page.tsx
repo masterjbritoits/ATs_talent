@@ -19,7 +19,16 @@ export default async function CandidatesPage({
   const { candidates, duplicates } = candidatesData;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Candidate Pipeline</h1>
+        <p className="mt-2 max-w-3xl text-sm text-muted">
+          Prioritize faster decisions with precise filtering, safer bulk actions, and a cleaner
+          recruiter workflow.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
       <div className="lg:col-span-1">
         <Suspense fallback={<div>Loading filters...</div>}>
           <CandidateFilterSidebar
@@ -47,6 +56,7 @@ export default async function CandidatesPage({
             </div>
           </Card>
         )}
+      </div>
       </div>
     </div>
   );

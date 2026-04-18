@@ -61,7 +61,12 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
   ];
 
   return (
-    <div className="w-full space-y-6 rounded-2xl border border-border bg-white p-5 shadow-soft">
+    <div className="w-full space-y-6 rounded-2xl border border-border bg-white p-6 shadow-soft">
+      <div className="border-b border-slate-100 pb-3">
+        <h3 className="text-base font-semibold tracking-tight text-slate-900">Filters</h3>
+        <p className="mt-1 text-sm text-muted">Narrow the pipeline with precision.</p>
+      </div>
+
       <div>
         <label className="block text-sm font-semibold text-slate-700">Search</label>
         <input
@@ -69,7 +74,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
           placeholder="Name, email, role..."
           value={filters.search ?? ""}
           onChange={(e) => handleFilterChange("search", e.target.value)}
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 focus:border-primary focus:outline-none"
+          className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm placeholder-slate-400 focus:border-primary focus:outline-none"
         />
       </div>
 
@@ -78,7 +83,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
         <select
           value={filters.status ?? ""}
           onChange={(e) => handleFilterChange("status", e.target.value)}
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none"
         >
           <option value="">All statuses</option>
           {statusOptions.map((opt) => (
@@ -94,7 +99,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
         <select
           value={filters.jobId ?? ""}
           onChange={(e) => handleFilterChange("jobId", e.target.value)}
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none"
         >
           <option value="">All roles</option>
           {jobs.map((job) => (
@@ -114,7 +119,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
           value={filters.minScore ?? ""}
           onChange={(e) => handleFilterChange("minScore", e.target.value ? parseInt(e.target.value) : undefined)}
           placeholder="0-100"
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 focus:border-primary focus:outline-none"
+          className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm placeholder-slate-400 focus:border-primary focus:outline-none"
         />
       </div>
 
@@ -126,7 +131,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
             type="date"
             value={filters.afterDate ?? ""}
             onChange={(e) => handleFilterChange("afterDate", e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none"
           />
         </div>
         <div>
@@ -135,7 +140,7 @@ export function CandidateFilterSidebar({ jobs, onFiltersChange }: Props) {
             type="date"
             value={filters.beforeDate ?? ""}
             onChange={(e) => handleFilterChange("beforeDate", e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-primary focus:outline-none"
           />
         </div>
       </div>

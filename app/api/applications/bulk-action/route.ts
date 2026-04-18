@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { getSessionUserId } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { CandidateRepository } from "@/server/repositories/candidate-repository";
 
 export interface BulkActionPayload {
   action: "review" | "advance" | "reject" | "hold";
@@ -10,22 +10,58 @@ export interface BulkActionPayload {
   notes?: string;
 }
 
+const MAX_BULK_CANDIDATES = 100;
+
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getSessionUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.isActive) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const idempotencyKey = request.headers.get("idempotency-key")?.trim();
+    if (!idempotencyKey) {
+      return NextResponse.json(
+        { error: "Missing required header: idempotency-key" },
+        { status: 400 }
+      );
+    }
+
+    const dryRun = request.nextUrl.searchParams.get("dryRun") === "true";
+
     const body = (await request.json()) as BulkActionPayload;
-
     const { action, candidateIds, jobId, notes } = body;
+    const uniqueCandidateIds = [...new Set(candidateIds ?? [])];
 
-    if (!action || !candidateIds || candidateIds.length === 0) {
+    if (!action || uniqueCandidateIds.length === 0) {
       return NextResponse.json(
         { error: "Missing required fields: action, candidateIds" },
         { status: 400 }
       );
     }
 
-    const repo = new CandidateRepository();
+    if (uniqueCandidateIds.length > MAX_BULK_CANDIDATES) {
+      return NextResponse.json(
+        {
+          error: `Bulk actions are limited to ${MAX_BULK_CANDIDATES} candidates per request.`
+        },
+        { status: 400 }
+      );
+    }
 
-    // Map action to status
+    const idempotencyRecordKey = `bulk_action:${idempotencyKey}`;
+    const existing = await prisma.systemSetting.findUnique({
+      where: { key: idempotencyRecordKey }
+    });
+    if (existing && !dryRun) {
+      return NextResponse.json(existing.valueJson);
+    }
+
     const statusMap: Record<string, string> = {
       review: "MANUAL_REVIEW",
       advance: "SHORTLISTED",
@@ -36,54 +72,92 @@ export async function POST(request: NextRequest) {
     const newStatus = statusMap[action];
     if (!newStatus) {
       return NextResponse.json(
-        { error: \Invalid action: \\ },
+        { error: `Invalid action: ${action}` },
         { status: 400 }
       );
     }
 
-    // Update for each candidate
-    let updatedCount = 0;
-    for (const candidateId of candidateIds) {
-      const result = await repo.updateApplicationStatus(candidateId, jobId ?? null, newStatus);
-      updatedCount += result.count;
-      
-      // Update candidate status as well to stay in sync
-      await repo.bulkUpdateStatus([candidateId], newStatus);
+    const whereClause = {
+      candidateId: { in: uniqueCandidateIds },
+      ...(jobId ? { jobId } : {})
+    };
 
-      // If notes provided, add audit log
-      if (notes) {
-        await prisma.auditLog.create({
-          data: {
-            entityType: \"CANDIDATE\",
-            entityId: candidateId,
-            action: \BULK_\\,
-            metadataJson: {
-              status: newStatus,
-              notes,
-              jobId,
-              timestamp: new Date().toISOString()
-            }
-          }
-        }).catch(() => {
-          // Audit log creation is non-critical
-        });
-      }
+    const applicationsMatched = await prisma.application.count({ where: whereClause });
+    const candidatesMatched = await prisma.candidate.count({
+      where: { id: { in: uniqueCandidateIds } }
+    });
+
+    if (dryRun) {
+      return NextResponse.json(
+        {
+          dryRun: true,
+          action,
+          candidatesRequested: uniqueCandidateIds.length,
+          candidatesMatched,
+          applicationsMatched,
+          targetStatus: newStatus
+        },
+        { status: 200 }
+      );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        action,
-        candidatesProcessed: candidateIds.length,
-        applicationsUpdated: updatedCount,
-        timestamp: new Date().toISOString()
+    const actionName = `BULK_${action.toUpperCase()}`;
+    const [appUpdateResult, candidateUpdateResult] = await prisma.$transaction([
+      prisma.application.updateMany({
+        where: whereClause,
+        data: { status: newStatus as any }
+      }),
+      prisma.candidate.updateMany({
+        where: { id: { in: uniqueCandidateIds } },
+        data: { status: newStatus as any }
+      }),
+      prisma.auditLog.createMany({
+        data: uniqueCandidateIds.map((candidateId) => ({
+          actorUserId: userId,
+          entityType: "CANDIDATE",
+          entityId: candidateId,
+          action: actionName,
+          metadataJson: {
+            status: newStatus,
+            notes: notes ?? null,
+            jobId: jobId ?? null,
+            idempotencyKey,
+            timestamp: new Date().toISOString()
+          }
+        }))
+      })
+    ]);
+
+    const responsePayload = {
+      success: true,
+      action,
+      candidatesRequested: uniqueCandidateIds.length,
+      candidatesUpdated: candidateUpdateResult.count,
+      applicationsUpdated: appUpdateResult.count,
+      status: newStatus,
+      timestamp: new Date().toISOString(),
+      idempotencyKey
+    };
+
+    await prisma.systemSetting.upsert({
+      where: { key: idempotencyRecordKey },
+      create: {
+        key: idempotencyRecordKey,
+        valueJson: responsePayload
       },
+      update: {
+        valueJson: responsePayload
+      }
+    });
+
+    return NextResponse.json(
+      responsePayload,
       { status: 200 }
     );
   } catch (error) {
-    console.error(\"[bulk-action] Error:\", error);
+    console.error("[bulk-action] Error:", error);
     return NextResponse.json(
-      { error: \"Failed to process bulk action\", details: String(error) },
+      { error: "Failed to process bulk action", details: String(error) },
       { status: 500 }
     );
   }
