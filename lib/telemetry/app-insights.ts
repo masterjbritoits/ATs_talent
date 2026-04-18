@@ -1,19 +1,29 @@
 /**
  * Application Insights telemetry initialisation.
  *
- * Call `initTelemetry()` once at application startup (e.g. in
- * instrumentation.ts for Next.js) or from the top-level server layout.
- *
- * When APPLICATIONINSIGHTS_CONNECTION_STRING is not set the module is a no-op
- * so local development is unaffected.
+ * Call initTelemetry() once at application startup (for example from
+ * instrumentation.ts). The SDK is loaded lazily only when a connection string
+ * is present so local dev stays clean and fast.
  */
-import appInsights from "applicationinsights";
-
 let _initialised = false;
+let _client: {
+  trackEvent: (input: { name: string; properties?: Record<string, string> }) => void;
+  trackException: (input: { exception: Error; properties?: Record<string, string> }) => void;
+  trackMetric: (input: { name: string; value: number; properties?: Record<string, string> }) => void;
+  flush: (input: { callback: () => void }) => void;
+} | null = null;
 
-export function initTelemetry() {
+async function loadAppInsights() {
+  const { createRequire } = await import("node:module");
+  const require = createRequire(import.meta.url);
+  return require("applicationinsights");
+}
+
+export async function initTelemetry() {
   const connStr = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
   if (!connStr || _initialised) return;
+
+  const appInsights = await loadAppInsights();
 
   appInsights
     .setup(connStr)
@@ -27,34 +37,35 @@ export function initTelemetry() {
     .setSendLiveMetrics(process.env.NODE_ENV === "production")
     .start();
 
+  _client = appInsights.defaultClient ?? null;
   _initialised = true;
 }
 
 /** Track a named event with optional properties. */
 export function trackEvent(name: string, properties?: Record<string, string>) {
-  if (!_initialised) return;
-  appInsights.defaultClient?.trackEvent({ name, properties });
+  if (!_initialised || !_client) return;
+  _client.trackEvent({ name, properties });
 }
 
 /** Track an exception. */
 export function trackException(error: Error, properties?: Record<string, string>) {
-  if (!_initialised) return;
-  appInsights.defaultClient?.trackException({ exception: error, properties });
+  if (!_initialised || !_client) return;
+  _client.trackException({ exception: error, properties });
 }
 
-/** Track a metric value (e.g. sync duration). */
+/** Track a metric value (for example sync duration). */
 export function trackMetric(name: string, value: number, properties?: Record<string, string>) {
-  if (!_initialised) return;
-  appInsights.defaultClient?.trackMetric({ name, value, properties });
+  if (!_initialised || !_client) return;
+  _client.trackMetric({ name, value, properties });
 }
 
-/** Flush all buffered telemetry (useful before function host shuts down). */
+/** Flush all buffered telemetry (useful before process shutdown). */
 export function flushTelemetry(): Promise<void> {
   return new Promise((resolve) => {
-    if (!_initialised) {
+    if (!_initialised || !_client) {
       resolve();
       return;
     }
-    appInsights.defaultClient?.flush({ callback: () => resolve() });
+    _client.flush({ callback: () => resolve() });
   });
 }

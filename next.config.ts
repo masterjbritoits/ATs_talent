@@ -7,9 +7,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb"
-    },
-    // Enable instrumentation.ts for Application Insights init
-    instrumentationHook: true
+    }
   },
   // Expose non-secret runtime config to server components
   env: {
