@@ -87,23 +87,65 @@ export function CandidateTable({ candidates }: { candidates: any[] }) {
           >
             {pending ? "Exporting..." : "Export Excel"}
           </Button>
-          <Button
-            onClick={() =>
-              startTransition(async () => {
-                await fetch("/api/candidates/bulk", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    candidateIds: selectedIds,
-                    status: "REJECTED",
-                    templateType: "rejection"
+          {selectedIds.length > 0 && (
+            <>
+              <Button
+                onClick={() =>
+                  startTransition(async () => {
+                    await fetch("/api/applications/bulk-action", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "review",
+                        candidateIds: selectedIds,
+                        notes: "Marked as reviewed via bulk action"
+                      })
+                    });
+                    setSelectedIds([]);
                   })
-                });
-              })
-            }
-          >
-            Bulk Reject
-          </Button>
+                }
+              >
+                Mark Reviewed
+              </Button>
+              <Button
+                onClick={() =>
+                  startTransition(async () => {
+                    await fetch("/api/applications/bulk-action", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "advance",
+                        candidateIds: selectedIds,
+                        notes: "Advanced via bulk action"
+                      })
+                    });
+                    setSelectedIds([]);
+                  })
+                }
+              >
+                Advance
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() =>
+                  startTransition(async () => {
+                    await fetch("/api/applications/bulk-action", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "reject",
+                        candidateIds: selectedIds,
+                        notes: "Rejected via bulk action"
+                      })
+                    });
+                    setSelectedIds([]);
+                  })
+                }
+              >
+                Reject
+              </Button>
+            </>
+          )}
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -137,3 +179,4 @@ export function CandidateTable({ candidates }: { candidates: any[] }) {
     </div>
   );
 }
+

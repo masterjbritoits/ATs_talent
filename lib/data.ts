@@ -25,18 +25,51 @@ export async function getDashboardData() {
 
 export async function getCandidatesData(searchParams?: Record<string, string | string[] | undefined>) {
   const where: any = {};
+
+  // Status filter
   if (searchParams?.status && typeof searchParams.status === "string") {
     where.status = searchParams.status;
   }
+
+  // Talent pool filter
   if (searchParams?.talentPool === "true") {
     where.isInTalentPool = true;
   }
+
+  // Search filter (name, email, title)
   if (searchParams?.q && typeof searchParams.q === "string") {
     where.OR = [
-      { fullName: { contains: searchParams.q } },
-      { primaryEmail: { contains: searchParams.q } },
-      { currentTitle: { contains: searchParams.q } }
+      { fullName: { contains: searchParams.q, mode: "insensitive" } },
+      { primaryEmail: { contains: searchParams.q, mode: "insensitive" } },
+      { currentTitle: { contains: searchParams.q, mode: "insensitive" } }
     ];
+  }
+
+  // Job filter (via applications)
+  if (searchParams?.jobId && typeof searchParams.jobId === "string") {
+    where.applications = {
+      some: { jobId: searchParams.jobId }
+    };
+  }
+
+  // Min score filter (via applications)
+  if (searchParams?.minScore && typeof searchParams.minScore === "string") {
+    const minScore = parseInt(searchParams.minScore, 10);
+    if (!isNaN(minScore)) {
+      where.overallScore = { gte: minScore };
+    }
+  }
+
+  // Date range filters
+  const dateWhere: any = {};
+  if (searchParams?.afterDate && typeof searchParams.afterDate === "string") {
+    dateWhere.gte = new Date(searchParams.afterDate);
+  }
+  if (searchParams?.beforeDate && typeof searchParams.beforeDate === "string") {
+    dateWhere.lte = new Date(searchParams.beforeDate);
+  }
+  if (Object.keys(dateWhere).length > 0) {
+    where.createdAt = dateWhere;
   }
 
   const candidates = await prisma.candidate.findMany({
