@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from \"next/server\";
-
-import { prisma } from \"@/lib/db/prisma\";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -9,18 +8,18 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   try {
     const auditLogs = await prisma.auditLog.findMany({
       where: { 
-        entityType: \"CANDIDATE\",
+        entityType: "CANDIDATE",
         entityId: candidateId 
       },
-      orderBy: { createdAt: \"desc\" },
-      take: 50 // Last 50 actions
+      orderBy: { createdAt: "desc" },
+      take: 50
     });
 
     return NextResponse.json(auditLogs);
   } catch (error) {
-    console.error(\"[candidates/audit] Error:\", error);
+    console.error("[candidates/audit] Error:", error);
     return NextResponse.json(
-      { error: \"Failed to fetch audit logs\" },
+      { error: "Failed to fetch audit logs" },
       { status: 500 }
     );
   }

@@ -23,6 +23,7 @@ export type DashboardMetrics = {
   pendingEmailActions: number;
   duplicateCandidates: number;
   upcomingInterviews: number;
+  openJobsCount: number;
 };
 
 export type ParsedCandidateProfile = {

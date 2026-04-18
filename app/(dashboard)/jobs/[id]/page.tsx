@@ -30,12 +30,19 @@ export default async function JobDetailPage({
           <Badge tone={job.status === "OPEN" ? "success" : "warning"}>{job.status}</Badge>
         </div>
         <p className="mt-6 text-sm text-muted">{job.description}</p>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href={`/job-publishing?jobId=${job.id}`}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#132f55]"
           >
             Publicar esta vaga
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href={`/jobs/${job.id}/pipeline`}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-muted hover:bg-white/5 transition"
+          >
+            Pipeline view
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>

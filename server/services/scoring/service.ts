@@ -47,16 +47,16 @@ export async function rescoreApplication(candidateId: string, job: Job | null, a
 export async function refreshJobRanking(jobId: string) {
   const applications = await prisma.application.findMany({
     where: { jobId },
+    select: { id: true, score: true },
     orderBy: [{ score: "desc" }, { updatedAt: "desc" }]
   });
 
-  await Promise.all(
+  // Batch into single transaction — N individual updates but inside one round-trip
+  await prisma.$transaction(
     applications.map((application, index) =>
       prisma.application.update({
         where: { id: application.id },
-        data: {
-          rankingPosition: index + 1
-        }
+        data: { rankingPosition: index + 1 }
       })
     )
   );

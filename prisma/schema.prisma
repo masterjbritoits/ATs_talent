@@ -118,6 +118,12 @@ model Candidate {
   emails               EmailMessage[]
   notes                RecruiterNote[]
   interviews           InterviewEvent[]
+
+  @@index([status])
+  @@index([overallScore])
+  @@index([createdAt])
+  @@index([isInTalentPool])
+  @@index([duplicateGroupKey])
 }
 
 model Application {
@@ -139,6 +145,11 @@ model Application {
   attachments        Attachment[]
   emails             EmailMessage[]
   interviews         InterviewEvent[]
+
+  @@index([jobId, status])
+  @@index([jobId, score])
+  @@index([candidateId])
+  @@index([appliedAt])
 }
 
 model EmailMessage {
@@ -209,6 +220,9 @@ model InterviewEvent {
   updatedAt         DateTime     @updatedAt
   candidate         Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   application       Application? @relation(fields: [applicationId], references: [id])
+
+  @@index([startsAt])
+  @@index([candidateId])
 }
 
 model EmailTemplate {
@@ -240,14 +254,18 @@ model ImportRun {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
+  id          String   @id @default(cuid())
   actorUserId String?
-  entityType String
-  entityId   String
-  action     String
+  entityType  String
+  entityId    String
+  action      String
   metadataJson Json
-  createdAt  DateTime @default(now())
-  actor      User?    @relation(fields: [actorUserId], references: [id])
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityId])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
 }
 
 model SystemSetting {
