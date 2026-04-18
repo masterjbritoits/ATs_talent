@@ -2,7 +2,8 @@ import { Suspense } from "react";
 
 import { CandidateFilterSidebar } from "@/components/candidates/candidate-filter-sidebar";
 import { CandidateTable } from "@/components/candidates/candidate-table";
-import { Card } from "@/components/ui/card";
+import { DuplicateReviewPanel } from "@/components/candidates/duplicate-review-panel";
+import { PaginationControls } from "@/components/ui/pagination";
 import { getCandidatesData, getJobsData } from "@/lib/data";
 
 export default async function CandidatesPage({
@@ -16,16 +17,23 @@ export default async function CandidatesPage({
     getJobsData()
   ]);
 
-  const { candidates, duplicates } = candidatesData;
+  const { candidates, duplicates, total, page, pageSize, totalPages } = candidatesData;
 
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-border bg-white p-6 shadow-soft">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Candidate Pipeline</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted">
-          Prioritize faster decisions with precise filtering, safer bulk actions, and a cleaner
-          recruiter workflow.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Candidate Pipeline</h1>
+            <p className="mt-2 max-w-3xl text-sm text-muted">
+              Prioritize faster decisions with precise filtering, safer bulk actions, and a cleaner
+              recruiter workflow.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 tabular-nums">
+            {total} total
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
@@ -39,23 +47,20 @@ export default async function CandidatesPage({
 
       <div className="space-y-6 lg:col-span-3">
         <CandidateTable candidates={candidates} />
+        <PaginationControls page={page} totalPages={totalPages} total={total} pageSize={pageSize} />
 
-        {duplicates.length > 0 && (
-          <Card>
-            <h3 className="text-lg font-semibold">Duplicate Review Queue</h3>
-            <div className="mt-4 space-y-3">
-              {duplicates.map((duplicate) => (
-                <div key={duplicate.groupKey} className="rounded-xl border border-slate-100 p-4">
-                  <p className="font-semibold">{duplicate.groupKey}</p>
-                  <p className="text-sm text-muted">
-                    {duplicate.candidateIds.length} candidates · {duplicate.confidence}% confidence
-                  </p>
-                  <p className="mt-2 text-sm text-muted">{duplicate.reason.join(" | ")}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+        <DuplicateReviewPanel
+          duplicates={duplicates}
+          candidates={candidates.map((c) => ({
+            id: c.id,
+            fullName: c.fullName,
+            primaryEmail: c.primaryEmail,
+            currentTitle: c.currentTitle,
+            overallScore: c.overallScore,
+            status: c.status,
+            createdAt: c.createdAt
+          }))}
+        />
       </div>
       </div>
     </div>
