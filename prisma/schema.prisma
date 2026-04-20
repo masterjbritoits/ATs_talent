@@ -23,6 +23,14 @@ enum CandidateStatus {
   NEW
   MANUAL_REVIEW
   SHORTLISTED
+  SANITY_CHECK
+  BEHAVIOURAL_INTERVIEW
+  TECHNICAL_INTERVIEW
+  PROJECT_INTERVIEW
+  CLIENT_INTERVIEW
+  PROPOSAL_SENT
+  PROPOSAL_REJECTED
+  AWARDED
   REJECTED
   INTERVIEW_SCHEDULED
   HIRED
@@ -33,6 +41,14 @@ enum ApplicationStatus {
   NEW
   REVIEW
   ADVANCED
+  SANITY_CHECK
+  BEHAVIOURAL_INTERVIEW
+  TECHNICAL_INTERVIEW
+  PROJECT_INTERVIEW
+  CLIENT_INTERVIEW
+  PROPOSAL_SENT
+  PROPOSAL_REJECTED
+  AWARDED
   REJECTED
   INTERVIEW_SCHEDULED
   TALENT_POOL
@@ -110,6 +126,10 @@ model Candidate {
   assignedRecruiterId  String?
   duplicateGroupKey    String?
   isInTalentPool       Boolean            @default(false)
+  preferredLanguage    String             @default("pt")
+  gdprConsent          DateTime?
+  gdprConsentIp        String?
+  anonymisedAt         DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   assignedRecruiter    User?              @relation("CandidateRecruiter", fields: [assignedRecruiterId], references: [id])
@@ -217,6 +237,7 @@ model InterviewEvent {
   applicationId     String?
   graphEventId      String?
   title             String
+  interviewType     String               @default("BEHAVIOURAL")
   startsAt          DateTime
   endsAt            DateTime
   location          String?
@@ -235,6 +256,7 @@ model EmailTemplate {
   id              String   @id @default(cuid())
   name            String
   type            String   @unique
+  lang            String   @default("pt")
   subjectTemplate String
   bodyTemplate    String
   isActive        Boolean  @default(true)

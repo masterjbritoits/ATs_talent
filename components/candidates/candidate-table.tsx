@@ -11,6 +11,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { STAGE_BADGE_CLASS, stageLabel } from "@/lib/constants/pipeline";
 
 export function CandidateTable({ candidates }: { candidates: any[] }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -112,7 +113,15 @@ export function CandidateTable({ candidates }: { candidates: any[] }) {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ getValue }) => <Badge tone="primary">{String(getValue())}</Badge>
+        cell: ({ getValue }) => {
+          const v = String(getValue());
+          const cls = STAGE_BADGE_CLASS[v] ?? "bg-slate-100 text-slate-700";
+          return (
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+              {stageLabel(v, "pt")}
+            </span>
+          );
+        },
       },
       { accessorKey: "overallScore", header: "Score" },
       {
