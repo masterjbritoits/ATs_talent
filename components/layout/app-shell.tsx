@@ -3,14 +3,20 @@ import { ReactNode } from "react";
 import {
   BarChart3,
   BriefcaseBusiness,
+  CalendarClock,
+  ClipboardCheck,
   ExternalLink,
+  FileCheck,
   FileText,
   Inbox,
+  Kanban,
   LayoutDashboard,
   Mail,
   Settings,
+  TrendingUp,
   Users,
-  UserSquare2
+  UserSquare2,
+  Workflow
 } from "lucide-react";
 
 import { APP_NAME } from "@/lib/constants/app";
@@ -22,6 +28,12 @@ const navItems = [
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/jobs", label: "Jobs", icon: BriefcaseBusiness },
+  { href: "/pipeline", label: "Pipeline Board", icon: Kanban },
+  { href: "/scorecards", label: "Scorecards", icon: ClipboardCheck },
+  { href: "/offers", label: "Offers", icon: FileCheck },
+  { href: "/scheduling", label: "Scheduling", icon: CalendarClock },
+  { href: "/sequences", label: "Sequences", icon: Workflow },
+  { href: "/analytics", label: "Analytics", icon: TrendingUp },
   { href: "/job-publishing", label: "Publishing", icon: ExternalLink },
   { href: "/talent-pool", label: "Talent Pool", icon: UserSquare2 },
   { href: "/templates", label: "Templates", icon: Mail },

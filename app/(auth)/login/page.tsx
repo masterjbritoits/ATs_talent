@@ -48,7 +48,8 @@ export default async function LoginPage() {
                 name="email"
                 type="email"
                 className="h-11 w-full rounded-xl border border-border bg-slate-50 px-4"
-                defaultValue="joana.recruiter@itsector.pt"
+                placeholder="email@itsector.pt"
+                autoComplete="email"
               />
             </div>
             <div>
@@ -57,7 +58,7 @@ export default async function LoginPage() {
                 name="password"
                 type="password"
                 className="h-11 w-full rounded-xl border border-border bg-slate-50 px-4"
-                defaultValue="Recruiter123!"
+                autoComplete="current-password"
               />
             </div>
             <Button className="w-full" type="submit">

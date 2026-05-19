@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   ADMIN
   RECRUITER
+  HIRING_MANAGER
 }
 
 enum JobStatus {
@@ -72,11 +73,13 @@ model User {
   passwordHash String
   role         UserRole
   isActive     Boolean         @default(true)
+  jobIds       String          @default("[]")
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   assigned     Candidate[]     @relation("CandidateRecruiter")
   notes        RecruiterNote[]
   auditLogs    AuditLog[]
+  scorecards   InterviewScorecard[]
 }
 
 model Job {
@@ -99,6 +102,7 @@ model Job {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   applications          Application[]
+  boardPosts            JobBoardPost[]
 }
 
 model Candidate {
@@ -165,6 +169,9 @@ model Application {
   attachments        Attachment[]
   emails             EmailMessage[]
   interviews         InterviewEvent[]
+  scorecards         InterviewScorecard[]
+  offer              OfferLetter?
+  schedulingSlots    SchedulingSlot[]
 
   @@index([jobId, status])
   @@index([jobId, score])
@@ -302,3 +309,96 @@ model SystemSetting {
   valueJson Json
   updatedAt DateTime @updatedAt
 }
+
+// ─── Phase 6 models ──────────────────────────────────────────────────────────
+
+model InterviewScorecard {
+  id              String   @id @default(cuid())
+  applicationId   String
+  interviewEventId String?
+  authorId        String
+  interviewType   String
+  scoresJson      Json     // { communication: 4, technical: 5, ... }
+  overallScore    Float
+  recommendation  String   // ADVANCE | HOLD | REJECT
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  application     Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author          User           @relation(fields: [authorId], references: [id])
+
+  @@index([applicationId])
+}
+
+model OfferLetter {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  status        String   @default("DRAFT")  // DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED
+  salary        String?
+  startDate     DateTime?
+  benefitsJson  Json     @default("[]")
+  notes         String?
+  sentAt        DateTime?
+  respondedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model SchedulingSlot {
+  id            String   @id @default(cuid())
+  applicationId String
+  token         String   @unique @default(cuid())
+  startsAt      DateTime
+  endsAt        DateTime
+  location      String?
+  isBooked      Boolean  @default(false)
+  bookedAt      DateTime?
+  createdAt     DateTime @default(now())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([token])
+}
+
+model EmailSequence {
+  id           String   @id @default(cuid())
+  name         String
+  triggerStage String
+  stepsJson    Json     // [{ delayDays: 0, templateType: "APPLICATION_RECEIVED" }, ...]
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  enrollments  EmailSequenceEnrollment[]
+}
+
+model EmailSequenceEnrollment {
+  id           String   @id @default(cuid())
+  sequenceId   String
+  candidateId  String
+  currentStep  Int      @default(0)
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  sequence     EmailSequence @relation(fields: [sequenceId], references: [id])
+
+  @@index([sequenceId])
+  @@index([candidateId])
+}
+
+model JobBoardPost {
+  id        String   @id @default(cuid())
+  jobId     String
+  board     String   // LINKEDIN | SAPO | NET_EMPREGOS | CAREERS_PORTAL
+  status    String   @default("PENDING")  // PENDING | PUBLISHED | FAILED | REMOVED
+  externalId String?
+  postedAt  DateTime?
+  removedAt DateTime?
+  errorMsg  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, board])
+  @@index([jobId])
+}
+
